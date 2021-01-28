@@ -18,3 +18,5 @@ To set this up the first time:
 - Enter credentials (see source)
 - Open the Roboremo app and connect to the IP address 192.168.0.1
 - After succesfull connection, you can control the rc car
+
+https://github.com/ronski73/rc_car/blob/main/media/Screenshot_20210127-142524_RoboRemoFree.jpg
