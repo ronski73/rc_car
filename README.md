@@ -2,12 +2,16 @@
 Modded RC car (based on the Nikko VaporizR2 Nano) with a Wemos ESP8266 Pro mini and Wemos motorshield V2.0.
 For control a remote app was created with Roboremo.
 
+<img width="300" alt="roboremo app" src="https://github.com/ronski73/rc_car/blob/main/media/20210127_142422.jpg">
+
 Things worth mentioning:
 - Watertight concealment is preseved due to small size of the WEMOS pcbs
 - Control via Roboremo app (only Android) https://play.google.com/store/apps/details?id=com.hardcodedjoy.roboremofree&hl=en_US&gl=US
 - Car sets up its own AP (see source for info)
 - OTA update!
 - Remote debugging via putty!
+
+<img width="300" alt="roboremo app" src="https://github.com/ronski73/rc_car/blob/main/media/20210125_105909.jpg">
 
 To set this up the first time:
 - Copy the roboremo file in the RoboRemoFile directory to your mobile device and import it in Roboremo
@@ -19,4 +23,5 @@ To set this up the first time:
 - Open the Roboremo app and connect to the IP address 192.168.0.1
 - After succesfull connection, you can control the rc car
 
-https://github.com/ronski73/rc_car/blob/main/media/Screenshot_20210127-142524_RoboRemoFree.jpg
+<img width="300" alt="roboremo app" src="https://github.com/ronski73/rc_car/blob/main/media/Screenshot_20210127-142524_RoboRemoFree.jpg">
+
