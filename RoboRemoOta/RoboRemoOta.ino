@@ -40,8 +40,8 @@ int vel,inttotsteer;
 float steer,totsteer;
 
 // keepalives from app for safety
-unsigned long lastCmdTime = 60000;
-unsigned long aliveSentTime = 0;
+unsigned long lastCmdTime = 600;    // time in millis to stop motors when no heartbeat is received
+unsigned long aliveReceivedMillis = 0;
 
 // send debug message to serial AND OTA if available
 void DbgMessage(String logmessage)
@@ -71,24 +71,19 @@ void exeCmd() { // executes the command from cmd
   // example: set RoboRemo slider id to "ch0"
   // set min -100 (full backward)
   // and set max 100 (full forward)
-  
+ 
   if( cmdStartsWith("ch") ) {
     int ch = cmd[2] - '0';
-//    DbgMessage("slider detected");
     if(ch>=0 && ch<=9 && cmd[3]==' ') {
       chVal[ch] = (int)atof(cmd+4);
-//      DbgMessage("setting motor");
-//      DbgMessage(chVal[ch]);
 
       if (chVal[0] > 0) {
         motor.changeStatus(MOTOR_CH_A, MOTOR_STATUS_CCW);
         motor.changeStatus(MOTOR_CH_B, MOTOR_STATUS_CW);
-//        vel = chVal[0];
       }
       else if (chVal[0] < 0) {
         motor.changeStatus(MOTOR_CH_A, MOTOR_STATUS_CW);
         motor.changeStatus(MOTOR_CH_B, MOTOR_STATUS_CCW);
-//        vel = (-1*chVal[0]); 
       } 
 
       vel = abs(chVal[0]);
@@ -100,19 +95,26 @@ void exeCmd() { // executes the command from cmd
       DbgMessage("vel");
       DbgMessage(String(vel));
       
-      //motor.changeDuty(MOTOR_CH_BOTH, chVal[1]);
-      if (chVal[1] > 0) {
+      if (chVal[1] > 0) {                     // right
         motor.changeDuty(MOTOR_CH_A, vel);
         motor.changeDuty(MOTOR_CH_B, steer);
       }
-      else if (chVal[1] < 0) { // left
+      else if (chVal[1] < 0) {                // left
         motor.changeDuty(MOTOR_CH_A, steer);
         motor.changeDuty(MOTOR_CH_B, vel);
       }
-      else {           // straight
+      else {                                  // straight
         motor.changeDuty(MOTOR_CH_BOTH, vel);
       }
     }
+  }
+  else if( cmdStartsWith("alive")) { // heartbeat sender's ID
+    aliveReceivedMillis = millis();
+  }
+
+  // stop motor if heartbeat has time-out
+  if(millis() - aliveReceivedMillis > lastCmdTime) {
+    motor.changeDuty(MOTOR_CH_BOTH, 0);
   }
 }
 
@@ -126,7 +128,11 @@ void setup() {
   Wire.begin();
   delay(1000);  // wait to give everything to time to start
 
-  // scan I2C bus (making sure the motor shield is on   
+// ========================================
+
+  // ========================================
+  // scan I2C bus (making sure the motor shield is on)
+  // ========================================
   DbgMessage("\nI2C Scanner");
 
   byte error, address;
@@ -163,28 +169,30 @@ void setup() {
   else
     DbgMessage("done\n");
 
+// ========================================
+
   cmdIndex = 0;
   
-  while (motor.PRODUCT_ID != PRODUCT_ID_I2C_MOTOR) //wait motor shield ready.
+  while (motor.PRODUCT_ID != PRODUCT_ID_I2C_MOTOR)      //wait motor shield ready.
   {
-    motor.getInfo();  // just do something
+    motor.getInfo();                                    // just do something
   }
 
   // init motorshield
   motor.changeFreq(MOTOR_CH_BOTH, 10000);               // Change A & B 's Frequency to 10000Hz.
-  motor.changeDuty(MOTOR_CH_BOTH, 100);                 // Change A & B 's Duty to 100%
   motor.changeStatus(MOTOR_CH_BOTH, MOTOR_STATUS_CCW);  // Give motors some direction
 
   // setup WIFI AP
-  WiFi.softAPConfig(ip, ip, netmask); // configure ip address for softAP 
-  WiFi.softAP(ssid, pw); // configure ssid and password for softAP
+  WiFi.softAPConfig(ip, ip, netmask);                   // configure ip address for softAP 
+  WiFi.softAP(ssid, pw);                                // configure ssid and password for softAP
 
   // setup Roboremo server for reveiving commands via App
-  RemoServer.begin(); // start TCP server
+  RemoServer.begin();                                   // start TCP server
 
-  DbgMessage("ESP8266 RC receiver 1.1 powered by RoboRemo");
+  DbgMessage("=====================================================");
   DbgMessage((String)"SSID: " + ssid + "  PASS: " + pw);
   DbgMessage((String)"RoboRemo app must connect to " + ip.toString() + ":" + port);
+  DbgMessage("=====================================================");
 
   //Setup Telnet server for remote debugging
   TelnetServer.begin();
@@ -227,6 +235,9 @@ void setup() {
 
 void loop() {
 
+  // ========================================
+  // OTA Handling (do not use delay() in main loop!)
+  // ========================================
   ArduinoOTA.handle();
 
   // ========================================
@@ -234,7 +245,7 @@ void loop() {
   // ========================================
   if(!RemoClient.connected()) {
     RemoClient = RemoServer.available();
-    //loop to blink without delay
+    // loop to blink without delay
     unsigned long currentMillis = millis();
     if (currentMillis - previousMillis >= interval) {
       // save the last time you blinked the LED
@@ -243,22 +254,20 @@ void loop() {
       ledState = not(ledState);
       // set the LED with the ledState of the variable:
       digitalWrite(led,  ledState);
-//    DbgMessage("no client......");
     }
   }
 
+  // Roboremco client made contact
   if(RemoClient.available()) {
     digitalWrite(BUILTIN_LED,LOW);
-//    DbgMessage("here we have a connected client!");
-    char c = (char)RemoClient.read(); // read char from client (RoboRemo app)
+    char c = (char)RemoClient.read();         // read char from client (RoboRemo app)
 
-    if(c=='\n') { // if it is command ending
-//      DbgMessage("command ending");
+    if(c=='\n') {                             // if it is command ending
       cmd[cmdIndex] = 0;
-      exeCmd();  // execute the command
-      cmdIndex = 0; // reset the cmdIndex
+      exeCmd();                               // execute the command
+      cmdIndex = 0;                           // reset the cmdIndex
     } else {      
-      cmd[cmdIndex] = c; // add to the cmd buffer
+      cmd[cmdIndex] = c;                      // add to the cmd buffer
       if(cmdIndex<99) cmdIndex++;
     }
   } 
